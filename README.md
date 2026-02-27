@@ -1,5 +1,7 @@
 # LFC Ticket Registration Monitor
 
+![LFC Monitor Dashboard](assets/images/futcal-nav.png)
+
 A robust, containerized Python automation tool that monitors the [Liverpool FC Ticket Availability](https://www.liverpoolfc.com/tickets/tickets-availability) page. It detects upcoming "Additional Members Sales" and automatically adds them to your Google Calendar, ensuring you never miss a registration window.
 
 ## 🚀 Features
