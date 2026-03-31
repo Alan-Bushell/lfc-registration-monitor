@@ -11,13 +11,35 @@ A robust, containerized Python automation tool that monitors the [Liverpool FC T
 *   **Calendar Integration**: Adds events directly to your Google Calendar using the Google Calendar API.
 *   **Duplicate Prevention**: Checks for existing events to avoid cluttering your calendar.
 *   **Rich Details**: Events include the opponent name, sale type, and a direct link to the booking page.
-*   **Cloud Ready**: Fully containerized with Docker and optimized for Google Cloud Run Jobs.
+*   **Cloud Ready**: fully containerized with Docker and optimized for Google Cloud Run (Serverless).
 
 ## 🛠️ Prerequisites
 
-*   **Python 3.12+**
-*   **Google Cloud Project** with the Calendar API enabled.
-*   **Service Account Credentials** (`service_account.json`) with permission to edit your target calendar.
+*   **Python 3.12+** / **Docker**
+*   **Google Cloud Project** with Calendar API & OAuth Consent Screen configured.
+*   **Stripe Account** for payments.
+*   **Neon / Supabase** (PostgreSQL Database).
+
+## 🚀 Deployment (Google Cloud Run - Low Cost)
+
+This project is designed to run on a single Cloud Run service (Backend + Frontend) with a serverless database to minimize costs.
+
+1. **Database**: Create a free PostgreSQL database on Neon or Supabase.
+2. **Build & Deploy**:
+   ```bash
+   gcloud run deploy lfc-monitor \
+     --source . \
+     --platform managed \
+     --allow-unauthenticated \
+     --set-env-vars="DATABASE_URL=YOUR_DB_URL,GOOGLE_CLIENT_ID=...,GOOGLE_CLIENT_SECRET=...,STRIPE_SECRET_KEY=...,FRONTEND_URL=https://your-service-url.run.app"
+   ```
+3. **Scholar**: Create a Cloud Scheduler job to hit the `/cron/scrape` endpoint every hour.
+
+## 🏗️ Architecture
+
+- **Backend**: FastAPI (Python) handles API requests, Auth, Stripe, and Scraping.
+- **Frontend**: React (Vite) built into static files served by FastAPI in production.
+- **Worker**: Triggered via HTTP request (`/cron/scrape`) from Cloud Scheduler.
 
 ## ⚙️ Configuration
 

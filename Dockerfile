@@ -1,22 +1,35 @@
-FROM python:3.12-slim
+# Stage 1: Build Frontend
+FROM node:18-alpine as frontend-builder
 
-# Set working directory
+WORKDIR /frontend
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend/ .
+RUN npm run build
+
+# Stage 2: Production Backend + Static Files
+FROM mcr.microsoft.com/playwright/python:v1.58.0-jammy
+
 WORKDIR /app
 
-# Copy requirements first to leverage cache
-COPY requirements.txt .
-
 # Install Python dependencies
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Playwright browsers and system dependencies
-# We only need Chromium for this bot
-RUN playwright install --with-deps chromium
+# Copy backend code
+COPY backend/ .
 
-# Copy the rest of the application code
-COPY . .
+# Copy built frontend static files
+COPY --from=frontend-builder /frontend/dist /app/app/static
 
-# Run the application
-# Ensure you pass the TARGET_CALENDAR_ID environment variable when running
-# e.g., docker run -e TARGET_CALENDAR_ID=your@email.com ...
-CMD ["python", "main.py"]
+# Environment Variables (can be overridden at runtime)
+ENV PORT=8080
+ENV FRONTEND_URL="https://YOUR_CLOUD_RUN_URL"
+ENV DATABASE_URL=""
+
+# Expose port (Cloud Run uses 8080 by default)
+EXPOSE 8080
+
+# Command to run the application
+# Use shell form to expand env vars properly
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}

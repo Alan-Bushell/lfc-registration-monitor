@@ -6,3 +6,5 @@ __pycache__/
 service_account.json
 credentials.json
 token.json
+google-cloud-sdk/
+google-cloud-cli-linux-x86_64.tar.gz

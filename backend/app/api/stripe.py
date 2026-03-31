@@ -18,23 +18,24 @@ webhook_secret = settings.STRIPE_WEBHOOK_SECRET
 async def create_checkout_session(payload: dict):
     user_email = payload.get("email")
     # In real app verify user identity via token/session
+    stripe_price_id = settings.STRIPE_PRICE_ID
+
+    if not stripe_price_id:
+        raise HTTPException(status_code=500, detail="Missing STRIPE_PRICE_ID configuration")
     
     try:
         session = stripe.checkout.Session.create(
             customer_email=user_email,
             payment_method_types=['card'],
             line_items=[{
-                'price_data': {
-                    'currency': 'gbp',
-                    'product_data': {'name': 'LFC Monitor Subscription'},
-                    'unit_amount': 200, # £2.00
-                    'recurring': {'interval': 'month'},
-                },
+                'price': stripe_price_id,
                 'quantity': 1,
             }],
             mode='subscription',
-            success_url='http://localhost:5173?success=true',
-            cancel_url='http://localhost:5173?canceled=true',
+            allow_promotion_codes=True, # Enables users to enter your ENDSEASON coupon
+            # Use configurable FRONTEND_URL instead of hardcoded localhost
+            success_url=f'{settings.FRONTEND_URL}?success=true',
+            cancel_url=f'{settings.FRONTEND_URL}?canceled=true',
         )
         return {"url": session.url}
     except Exception as e:

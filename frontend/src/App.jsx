@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+// Use relative path in production (same domain), or localhost for dev if env var is missing
+const API_URL = import.meta.env.PROD ? "" : (import.meta.env.VITE_API_URL || "http://localhost:8000");
 console.log("Configured API URL:", API_URL);
 
 function App() {
@@ -170,7 +171,7 @@ function App() {
                             <div>
                                 <p style={{ marginBottom: '2rem' }}>Activate your subscription to start receiving calendar invites.</p>
                                 <div style={{ background: '#0a0a0a', padding: '2rem', borderRadius: '12px', border: '1px solid #C8102E' }}>
-                                    <h2 style={{ fontSize: '2.5rem', marginBottom: '0.5rem', color: '#fff' }}>£2<small style={{ fontSize: '1rem', color: '#94a3b8', marginLeft: '5px' }}>/ month</small></h2>
+                                    <h2 style={{ fontSize: '2.5rem', marginBottom: '0.5rem', color: '#fff' }}>€29.99<small style={{ fontSize: '1rem', color: '#94a3b8', marginLeft: '5px' }}>/ year</small></h2>
                                     <button onClick={handleSubscribe} className="btn btn-primary" style={{ width: '100%', marginTop: '1.5rem' }}>
                                         Subscribe with Stripe
                                     </button>
