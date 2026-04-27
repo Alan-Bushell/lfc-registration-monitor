@@ -39,6 +39,7 @@ async def create_checkout_session(payload: dict):
         )
         return {"url": session.url}
     except Exception as e:
+        logger.exception("Stripe checkout failed")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/webhook")
@@ -86,3 +87,36 @@ async def stripe_webhook(request: Request, stripe_signature: str = Header(None),
             logger.warning("No email found in Stripe session")
 
     return {"status": "success"}
+
+
+@router.post("/customer-portal")
+async def create_customer_portal(payload: dict, db: AsyncSession = Depends(get_db)):
+    user_email = payload.get("email")
+    if not user_email:
+        raise HTTPException(status_code=400, detail="Missing email")
+
+    result = await db.execute(select(User).where(User.email == user_email))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    customer_id = user.stripe_customer_id
+    if not customer_id:
+        # Fallback lookup by email if webhook has not yet populated the customer id.
+        customers = stripe.Customer.list(email=user_email, limit=1)
+        if customers.data:
+            customer_id = customers.data[0].id
+            user.stripe_customer_id = customer_id
+            await db.commit()
+        else:
+            raise HTTPException(status_code=400, detail="No Stripe customer found for this email")
+
+    try:
+        session = stripe.billing_portal.Session.create(
+            customer=customer_id,
+            return_url=settings.FRONTEND_URL,
+        )
+        return {"url": session.url}
+    except Exception as e:
+        logger.exception("Stripe billing portal failed")
+        raise HTTPException(status_code=500, detail=str(e))

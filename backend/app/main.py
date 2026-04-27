@@ -5,6 +5,7 @@ import os
 from app.api import auth, stripe
 from app.db.session import engine, Base
 from app.services.worker import check_lfc_site
+from app.core.config import settings
 import logging
 
 # Create tables on startup (simplification for dev)
@@ -12,10 +13,18 @@ import asyncio
 
 app = FastAPI(title="LFC Monitor API")
 
+origins = []
+if settings.FRONTEND_URL:
+    origins.append(settings.FRONTEND_URL)
+
+for dev_origin in ("http://localhost:5173", "http://127.0.0.1:5173"):
+    if dev_origin not in origins:
+        origins.append(dev_origin)
+
 # Allow frontend to access API
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://vigilant-halibut-pw9xxprxg46399w4-5173.app.github.dev", "http://localhost:5173"], 
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

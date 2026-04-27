@@ -1,15 +1,29 @@
 import React, { useState, useEffect } from 'react';
 
-// Use relative path in production (same domain), or localhost for dev if env var is missing
-const API_URL = import.meta.env.PROD ? "" : (import.meta.env.VITE_API_URL || "http://localhost:8000");
+// Use relative path in production (same domain), or Codespaces domain for dev
+const API_URL = import.meta.env.VITE_API_URL || "";
 console.log("Configured API URL:", API_URL);
 
 function App() {
   const [user, setUser] = useState(null);
 
+    const refreshStatus = async (userId) => {
+        try {
+            const res = await fetch(`${API_URL}/auth/status/${userId}`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            if (data.user) setUser(data);
+        } catch (error) {
+            console.error("Status refresh error:", error);
+        }
+    };
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
+        const success = params.get("success");
+        const canceled = params.get("canceled");
+        const storedUserId = window.localStorage.getItem("userId");
     
     if (code) {
       fetch(`${API_URL}/auth/callback`, {
@@ -21,37 +35,71 @@ function App() {
       .then(data => {
           if (data.user) {
               setUser(data);
+                            window.localStorage.setItem("userId", data.id);
+                            window.localStorage.setItem("userEmail", data.user);
               window.history.replaceState({}, document.title, "/");
           }
       })
       .catch(err => console.error(err));
+        } else if (storedUserId) {
+            refreshStatus(storedUserId);
+        }
+
+        if (success || canceled) {
+            if (storedUserId) {
+                refreshStatus(storedUserId);
+            }
+            window.history.replaceState({}, document.title, "/");
     }
   }, []);
 
   const handleLogin = async () => {
     try {
+        console.log("Fetching from:", `${API_URL}/auth/login`);
         const res = await fetch(`${API_URL}/auth/login`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         window.location.href = data.url;
     } catch (error) {
-        alert("Backend not connected. Ensure Docker is running.");
+        console.error("Login error:", error);
+        alert(`Backend error: ${error.message}. Check browser console. Configured URL: ${API_URL}`);
     }
   };
 
   const handleSubscribe = async () => {
     if (!user) return;
     try {
+        console.log("Calling Stripe checkout with:", user);
         const res = await fetch(`${API_URL}/stripe/checkout-session`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email: user.user }) 
         });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         if (data.url) window.location.href = data.url;
     } catch (error) {
-        alert("Payment system offline.");
+        console.error("Stripe error:", error);
+        alert(`Payment error: ${error.message}. URL: ${API_URL}`);
     }
   };
+
+    const handleManageSubscription = async () => {
+        if (!user) return;
+        try {
+            const res = await fetch(`${API_URL}/stripe/customer-portal`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: user.user })
+            });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            if (data.url) window.location.href = data.url;
+        } catch (error) {
+            console.error("Portal error:", error);
+            alert(`Portal error: ${error.message}. URL: ${API_URL}`);
+        }
+    };
 
   return (
     <>
@@ -166,6 +214,9 @@ function App() {
                                 <p style={{ color: '#F6EB61', fontWeight: 'bold', fontSize: '1.2rem' }}>✅ Monitoring Active</p>
                                 <p>Your calendar is connected. We will auto-add events as they are found manually.</p>
                                 <p style={{ fontSize: '0.9rem', color: '#94a3b8', marginTop: '1rem' }}>Next scan in: ~45 mins</p>
+                                <button onClick={handleManageSubscription} className="btn btn-secondary" style={{ marginTop: '1.5rem' }}>
+                                    Manage Subscription
+                                </button>
                             </div>
                         ) : (
                             <div>

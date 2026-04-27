@@ -139,6 +139,14 @@ async def check_lfc_site():
                                     if link:
                                         href = await link.get_attribute("href")
                                         full_url = f"https://www.liverpoolfc.com{href}"
+                                        opponent_name = "Unknown Opponent"
+                                        if href:
+                                            slug_match = re.search(
+                                                r"liverpool-fc-v-(.+?)-\d{1,2}-[a-z]{3}-\d{4}",
+                                                href.lower(),
+                                            )
+                                            if slug_match:
+                                                opponent_name = slug_match.group(1).replace("-", " ").title()
                                         
                                         # Go to game page
                                         # We open a new page or reuse? Reuse is faster for single thread
@@ -156,14 +164,14 @@ async def check_lfc_site():
                                                     name_text = await name_el.text_content()
                                                     clean_name = ' '.join(name_text.strip().split())
                                                     
-                                                    if "Additional Members Sale" in clean_name and "Registration" in clean_name:
+                                                    if "Additional Members Sale" in clean_name:
                                                         date_el = await sale.query_selector(".whenavailable")
                                                         if date_el:
                                                             date_str = await date_el.inner_text()
                                                             # Format: Tue 9 Dec 2025, 8:00pm
                                                             try: 
                                                                 sale_date = datetime.strptime(date_str.strip(), "%a %d %b %Y, %I:%M%p")
-                                                                title = f"LFC Reg: {match_date.strftime('%Y-%m-%d')} Game"
+                                                                title = f"LFC: {opponent_name} - {clean_name}"
                                                                 await process_new_event(title, sale_date, full_url)
                                                             except Exception as e:
                                                                 logger.error(f"Date parse error: {e}")

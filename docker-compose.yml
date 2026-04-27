@@ -16,7 +16,11 @@ services:
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_PRICE_ID=${STRIPE_PRICE_ID}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
       - REDIRECT_URI=${REDIRECT_URI}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - VITE_API_URL=${VITE_API_URL}
     depends_on:
       - db
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
@@ -32,7 +36,7 @@ services:
     ports:
       - "5173:5173"
     environment:
-      - VITE_API_URL=https://vigilant-halibut-pw9xxprxg46399w4-8000.app.github.dev
+      - VITE_API_URL=${VITE_API_URL}
     depends_on:
       - backend
 

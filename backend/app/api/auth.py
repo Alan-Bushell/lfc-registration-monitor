@@ -44,17 +44,18 @@ async def callback(payload: dict, db: AsyncSession = Depends(get_db)):
     try:
         # Exchange auth code for tokens using direct token endpoint call.
         # This avoids PKCE verifier state issues in stateless deployments.
-        token_res = httpx.post(
-            "https://oauth2.googleapis.com/token",
-            data={
-                "code": code,
-                "client_id": GOOGLE_CLIENT_ID,
-                "client_secret": GOOGLE_CLIENT_SECRET,
-                "redirect_uri": REDIRECT_URI,
-                "grant_type": "authorization_code",
-            },
-            timeout=20.0,
-        )
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            token_res = await client.post(
+                "https://oauth2.googleapis.com/token",
+                data={
+                    "code": code,
+                    "client_id": GOOGLE_CLIENT_ID,
+                    "client_secret": GOOGLE_CLIENT_SECRET,
+                    "redirect_uri": REDIRECT_URI,
+                    "grant_type": "authorization_code",
+                },
+            )
+
         token_data = token_res.json()
         if token_res.status_code != 200:
             logger.error("Google token exchange failed. status=%s redirect_uri=%s response=%s", token_res.status_code, REDIRECT_URI, token_data)
@@ -84,3 +85,13 @@ async def callback(payload: dict, db: AsyncSession = Depends(get_db)):
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/status/{user_id}")
+async def status(user_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return {"user": user.email, "status": user.subscription_status, "id": user.id}
